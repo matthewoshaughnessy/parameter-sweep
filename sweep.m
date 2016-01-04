@@ -225,6 +225,7 @@ if strcmp(mode,'function_handle')
             [out{:}] = func(combinations{i}{:});
             results{i}(k).time = toc;
             results{i}(k) = out;
+            results{i}(k).inputs = combinations{i};
             if opt.time, fprintf('%f sec\n', results{i}(k).time),
             else fprintf('done.\n'); end
         end
@@ -262,6 +263,7 @@ if strcmp(mode,'function')
             [out{:}] = func(combinations{i}{:});
             results{i}(k).allOutputs = out;
             results{i}(k).time = toc;
+            results{i}(k).inputs = combinations{i};
             if opt.time && opt.nTrials==1
                 fprintf('%f sec\n', results{i}.time),
             elseif opt.time
@@ -289,6 +291,8 @@ if strcmp(mode,'script')
             % execute
             if swVars.opt.time, tic; end
             swVars.call();
+            swVars.results{swVars_i}(swVars_k).inputs = ...
+                swVars.combinations{swVars_i};
             if swVars.opt.time
                 swVars.results{swVars_i}(swVars_k).time = toc;
             end
