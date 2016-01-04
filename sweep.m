@@ -62,7 +62,7 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.1 - 3 January 2016
+%   Matt O'Shaughnessy, v0.2 - 4 January 2016
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
