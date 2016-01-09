@@ -62,7 +62,7 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.2 - 4 January 2016
+%   Matt O'Shaughnessy, v0.3 - 9 January 2016
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
@@ -208,7 +208,7 @@ else
     swVars.paramNames = paramNames;
     swVars.nParams = nParams;
     swVars.results = results;
-    swVars.nCombinations = combinations;
+    swVars.nCombinations = nCombinations;
     swVars.excludedVars = {'swVars_i','swVars_k','swVars_m'};
     clearvars -except swVars mode
 end
