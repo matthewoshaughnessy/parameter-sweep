@@ -62,14 +62,14 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.3 - 9 January 2016
+%   Matt O'Shaughnessy, v0.4 - 10 January 2016
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
 % --- get and validate input ---
 valFuncs.params = @(x) isstruct(x) && isscalar(x);
 valFuncs.posInt = @(x) isscalar(x) && round(x)==x;
-valFuncs.varsToStore = @(x) iscell(x) && all(cellfun(ischar,x));
+valFuncs.varsToStore = @(x) iscell(x) && all(cellfun(@ischar,x));
 valFuncs.time = @islogical;
 p = inputParser;
 p.addRequired('call');
