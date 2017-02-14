@@ -62,11 +62,12 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.4 - 10 January 2016
+%   Matt O'Shaughnessy, v0.6 - 14 Feb 2017
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
-% --- get and validate input ---
+% --- parse input ---
+fprintf('Initializing...\n');
 valFuncs.params = @(x) isstruct(x) && isscalar(x);
 valFuncs.posInt = @(x) isscalar(x) && round(x)==x;
 valFuncs.varsToStore = @(x) iscell(x) && all(cellfun(@ischar,x));
@@ -89,25 +90,37 @@ nParams = length(paramNames);
 clusterMode = ~isempty(opt.jobNum) && ~isempty(opt.totalJobs);
 % specified call isn't function handle or string
 if ~(isa(call,'function_handle') || isa(call,'char'))
-    error('Call must be fx handle or string function/script call');
+  error('Call must be fx handle or string function/script call');
 end
 % specified params contain invalid variable names
 if any(~cellfun(@isvarname,paramNames))
-    error('Parameter(s) %s are invalid (not a valid var name).', ...
-        strjoin(paramNames(~cellfun(@isvarname,paramNames))));
+  error('Parameter(s) %s are invalid (not a valid var name).', ...
+    strjoin(paramNames(~cellfun(@isvarname,paramNames))));
 end
 % specified params contain reserved words
 if any(cellfun(@iskeyword,paramNames))
-    error('Parameter(s) %s are invalid (reserved word).', ...
-        strjoin(paramNames(cellfun(@iskeyword,paramNames))));
+  error('Parameter(s) %s are invalid (reserved word).', ...
+    strjoin(paramNames(cellfun(@iskeyword,paramNames))));
 end
 % only one of jobNum and totalJobs specified
 if xor(~isempty(opt.jobNum), ~isempty(opt.jobNum))
-    error('In cluster mode, both jobNum and totalJobs must be input.');
+  error('In cluster mode, both jobNum and totalJobs must be input.');
 end
 % invalid jobNum
 if clusterMode && opt.jobNum > opt.totalJobs
-    error('Specified job number greater than total number of jobs.');
+  error('Specified job number greater than total number of jobs.');
+end
+% string (not string in cell) included in params
+if any(structfun(@(x) ischar(x) && ~isscalar(x), params))
+  error(['String included in params struct. All strings must be in cell'...
+    ' arrays.\nNote: if constructing params struct using the struct '...
+    'function, use double curly braces for a single input string\n'...
+    '(e.g., struct(''stringField'',{{''stringValue''}}))']);
+end
+% warn user if varsToStore not specified
+if isempty(opt.varsToStore)
+  fprintf(' - Returning all variables generated (this may be slow).\n');
+  fprintf('   To change, specify the varsToStore parameter.\n');
 end
 
 % --- prepare parameters to sweep ---
@@ -121,31 +134,31 @@ subsClosed(structfun(@iscell,params)) = '}';
 % create cell array
 str = 'combinations = cell(';
 for i = 1:nParams
-    nValues = length(params.(paramNames{i}));
-    str = [str num2str(nValues)];
-    str = [str ','];
+  nValues = length(params.(paramNames{i}));
+  str = [str num2str(nValues)];
+  str = [str ','];
 end
 str = [str(1:end-1) ');'];
 % nested for loop - one level per parameter to sweep
 for i = 1:nParams
-    str = [str sprintf('for p%d = 1:%d, ', ...
-        i, length(params.(paramNames{i})))];
+  str = [str sprintf('for p%d = 1:%d, ', ...
+    i, length(params.(paramNames{i})))];
 end
 str = [str sprintf('for i = 1:%d, ', nParams)];
 % assign combination of parameters for cell array
 str = [str 'combinations{'];
 for i = 1:nParams
-    str = [str sprintf('p%d,',i)];
+  str = [str sprintf('p%d,',i)];
 end
 str = [str(1:end-1) '} = {'];
 for i = 1:nParams
-    str = [str sprintf('params.(paramNames{%d})%cp%i%c,', ...
-        i, subsOpen(i), i, subsClosed(i))];
+  str = [str sprintf('params.(paramNames{%d})%cp%i%c,', ...
+    i, subsOpen(i), i, subsClosed(i))];
 end
 str = [str(1:end-1) '}; '];
 % end nested for loops
 for i = 1:nParams
-    str = [str 'end,'];
+  str = [str 'end,'];
 end
 str = [str 'end'];
 % create the cell array of parameter combinations
@@ -154,170 +167,171 @@ nCombinations = numel(combinations); %#ok
 
 % --- if cluster mode, pick the combinations for this node ---
 if clusterMode
-    jobsPerNode = nCombinations / opt.totalJobs;
-    combInds = zeros(ceil(jobsPerNode), opt.totalJobs);
-    wastedIncr = round(nCombinations/(numel(combInds)-nCombinations));
-    wastedInds = wastedIncr:wastedIncr:numel(combInds);
-    k = 1;
-    for i = 1:numel(combInds)
-        if any(i==wastedInds)
-            combInds(i) = NaN;
-        else
-            combInds(i) = k;
-            k = k + 1;
-        end
+  jobsPerNode = nCombinations / opt.totalJobs;
+  combInds = zeros(ceil(jobsPerNode), opt.totalJobs);
+  wastedIncr = round(nCombinations/(numel(combInds)-nCombinations));
+  wastedInds = wastedIncr:wastedIncr:numel(combInds);
+  k = 1;
+  for i = 1:numel(combInds)
+    if any(i==wastedInds)
+      combInds(i) = NaN;
+    else
+      combInds(i) = k;
+      k = k + 1;
     end
-    combinationIndsThisNode = combInds(:,opt.jobNum);
-    combinationIndsThisNode(isnan(combinationIndsThisNode)) = [];
-    combinationIndsThisNode = reshape(combinationIndsThisNode,1,[]);
+  end
+  combinationIndsThisNode = combInds(:,opt.jobNum);
+  combinationIndsThisNode(isnan(combinationIndsThisNode)) = [];
+  combinationIndsThisNode = reshape(combinationIndsThisNode,1,[]);
 else
-    combinationIndsThisNode = 1:nCombinations;
+  combinationIndsThisNode = 1:nCombinations;
 end
 
 % --- parse function/script call ---
 results = cell(size(combinations));
 if isa(call,'function_handle')
-    % function handle mode
-    mode = 'function_handle';
-    func = call;
+  % function handle mode
+  mode = 'function_handle';
+  func = call;
 elseif ~isempty(strfind(call,'('))
-    % function mode - need to parse inputs and outputs
-    mode = 'function';
-    [lhsStr, rhsStr] = strtok(call,'=');
-    outputs = strsplit(lhsStr,{' ',','});
-    for i = 1:length(outputs), outputs{i}(...
-            outputs{i}=='['|outputs{i}==']'|...
-            outputs{i}==' '|outputs{i}==',') = [];
-    end
-    outputs(cellfun(@isempty,outputs)) = [];
-    rhsStr = rhsStr(2:end);
-    func = str2func(strtrim(rhsStr(2:find(rhsStr=='(',1,'first')-1)));
-    inputNames.begin = find(rhsStr=='(',1,'first')+1;
-    inputNames.end = find(rhsStr==')',1,'last')-1;
-    inputNames = strsplit(strtrim(rhsStr(inputNames.begin:inputNames.end)),',');
-    for i = 1:length(inputNames), inputNames{i}(...
-            inputNames{i}==','|inputNames{i}=='('|inputNames{i}==')') = [];
-    end
-    inputNames(cellfun(@isempty,inputNames)) = [];
+  % function mode - need to parse inputs and outputs
+  mode = 'function';
+  [lhsStr, rhsStr] = strtok(call,'=');
+  outputs = strsplit(lhsStr,{' ',','});
+  for i = 1:length(outputs), outputs{i}(...
+      outputs{i}=='['|outputs{i}==']'|...
+      outputs{i}==' '|outputs{i}==',') = [];
+  end
+  outputs(cellfun(@isempty,outputs)) = [];
+  rhsStr = rhsStr(2:end);
+  func = str2func(strtrim(rhsStr(2:find(rhsStr=='(',1,'first')-1)));
+  inputNames.begin = find(rhsStr=='(',1,'first')+1;
+  inputNames.end = find(rhsStr==')',1,'last')-1;
+  inputNames = strsplit(strtrim(rhsStr(inputNames.begin:inputNames.end)),',');
+  for i = 1:length(inputNames), inputNames{i}(...
+      inputNames{i}==','|inputNames{i}=='('|inputNames{i}==')') = [];
+  end
+  inputNames(cellfun(@isempty,inputNames)) = [];
 else
-    mode = 'script';
-    swVars.call = str2func(call);
-    swVars.combinations = combinations;
-    swVars.opt = opt;
-    swVars.params = params;
-    swVars.paramNames = paramNames;
-    swVars.nParams = nParams;
-    swVars.results = results;
-    swVars.nCombinations = nCombinations;
-    swVars.excludedVars = {'swVars_i','swVars_k','swVars_m'};
-    clearvars -except swVars mode
+  mode = 'script';
+  swVars.call = str2func(call);
+  swVars.combinations = combinations;
+  swVars.opt = opt;
+  swVars.params = params;
+  swVars.paramNames = paramNames;
+  swVars.nParams = nParams;
+  swVars.results = results;
+  swVars.nCombinations = nCombinations;
+  swVars.excludedVars = {'swVars_i','swVars_k','swVars_m'};
+  clearvars -except swVars mode
 end
+fprintf(' - Executing in %s mode.\n',mode);
 
 % --- function handle mode ---
 if strcmp(mode,'function_handle')
-    if isempty(opt.nOutputs), opt.nOutputs = nargout(func); end
-    out = cell(1,opt.nOutputs);
-    for i = combinationIndsThisNode
-        for k = 1:opt.nTrials
-            fprintf('Combination %d of %d, trial %d of %d...', ...
-                i, nCombinations, k, opt.nTrials);
-            if opt.time, tic; end
-            [out{:}] = func(combinations{i}{:});
-            results{i}(k).time = toc;
-            results{i}(k) = out;
-            results{i}(k).inputs = combinations{i};
-            if opt.time, fprintf('%f sec\n', results{i}(k).time),
-            else fprintf('done.\n'); end
-        end
+  if isempty(opt.nOutputs), opt.nOutputs = nargout(func); end
+  out = cell(1,opt.nOutputs);
+  for i = combinationIndsThisNode
+    for k = 1:opt.nTrials
+      fprintf('Combination %d of %d, trial %d of %d...', ...
+        i, nCombinations, k, opt.nTrials);
+      if opt.time, tic; end
+      [out{:}] = func(combinations{i}{:});
+      results{i}(k).time = toc;
+      results{i}(k) = out;
+      results{i}(k).inputs = combinations{i};
+      if opt.time, fprintf('%f sec\n', results{i}(k).time),
+      else fprintf('done.\n'); end
     end
+  end
 end
 
 % --- function mode ---
 if strcmp(mode,'function')
-    if ~isempty(opt.nOutputs), warning(['Specified nOutputs=%d, ' ...
-            'call has %d outputs.  Using %d.'], ...
-            opt.nOutputs,length(outputs),length(outputs));
-    end
-    out = cell(1,length(outputs));
-    for i = combinationIndsThisNode
-        % replace parameters in inputs with these
-        funcInputs = cell(1,length(inputNames));
-        for k = 1:length(inputNames)
-            isSwept = inputNames{k}(end)=='*' || inputNames{k}(1)=='*';
-            if isSwept
-                paramName = inputNames{k}(inputNames{k}~='*');
-                paramNum = find(strcmp(paramName,paramNames));
-                if isempty(paramNum)
-                    error('Param to sweep %s not input.', paramName);
-                end
-                funcInputs{k} = combinations{i}{paramNum};
-            else
-                funcInputs{k} = inputNames{k};
-            end
+  if ~isempty(opt.nOutputs), warning(['Specified nOutputs=%d, ' ...
+      'call has %d outputs.  Using %d.'], ...
+      opt.nOutputs,length(outputs),length(outputs));
+  end
+  out = cell(1,length(outputs));
+  for i = combinationIndsThisNode
+    % replace parameters in inputs with these
+    funcInputs = cell(1,length(inputNames));
+    for k = 1:length(inputNames)
+      isSwept = inputNames{k}(end)=='*' || inputNames{k}(1)=='*';
+      if isSwept
+        paramName = inputNames{k}(inputNames{k}~='*');
+        paramNum = find(strcmp(paramName,paramNames));
+        if isempty(paramNum)
+          error('Param to sweep %s not input.', paramName);
         end
-        % execute
-        for k = 1:opt.nTrials
-            fprintf('Combination %d of %d, trial %d of %d...', ...
-                i, nCombinations, k, opt.nTrials);
-            if opt.time, tic; end
-            [out{:}] = func(combinations{i}{:});
-            results{i}(k).allOutputs = out;
-            results{i}(k).time = toc;
-            results{i}(k).inputs = combinations{i};
-            if opt.time && opt.nTrials==1
-                fprintf('%f sec\n', results{i}.time),
-            elseif opt.time
-                fprintf('%f sec\n', results{i}{k}.time);
-            else
-                fprintf('done.\n');
-            end
-        end
+        funcInputs{k} = combinations{i}{paramNum};
+      else
+        funcInputs{k} = inputNames{k};
+      end
     end
+    % execute
+    for k = 1:opt.nTrials
+      fprintf('Combination %d of %d, trial %d of %d...', ...
+        i, nCombinations, k, opt.nTrials);
+      if opt.time, tic; end
+      [out{:}] = func(combinations{i}{:});
+      results{i}(k).allOutputs = out;
+      results{i}(k).time = toc;
+      results{i}(k).inputs = combinations{i};
+      if opt.time && opt.nTrials==1
+        fprintf('%f sec\n', results{i}.time),
+      elseif opt.time
+        fprintf('%f sec\n', results{i}{k}.time);
+      else
+        fprintf('done.\n');
+      end
+    end
+  end
 end
 
 % --- script mode ---
 if strcmp(mode,'script')
-    clearvars mode
-    for swVars_i = 1:swVars.nCombinations
-        for swVars_k = 1:swVars.opt.nTrials
-            % set inputs for this parameter combination
-            fprintf('Combination %d of %d, trial %d of %d...', ...
-                swVars_i, numel(swVars.combinations), ...
-                swVars_k, swVars.opt.nTrials);
-            for swVars_m = 1:swVars.nParams
-                eval(sprintf('%s = swVars.combinations{%d}{%d};', ...
-                    swVars.paramNames{swVars_m}, swVars_i, swVars_m));
-            end
-            % execute
-            if swVars.opt.time, tic; end
-            swVars.call();
-            swVars.results{swVars_i}(swVars_k).inputs = ...
-                swVars.combinations{swVars_i};
-            if swVars.opt.time
-                swVars.results{swVars_i}(swVars_k).time = toc;
-            end
-            % store results
-            swVars.vars = whos;
-            swVars.vars = {swVars.vars.name};
-            for swVars_m = 1:length(swVars.vars)
-                swVars.varName = swVars.vars{swVars_m};
-                swVars.store = (isempty(swVars.opt.varsToStore) || ...
-                    any(strcmp(swVars.varName, swVars.opt.varsToStore))) && ...
-                    ~any(strcmp(swVars.varName, swVars.excludedVars));
-                if swVars.store
-                    eval(sprintf('swVars.results{%d}(%d).%s = %s;', ...
-                        swVars_i, swVars_k, ...
-                        swVars.varName, swVars.varName));
-                end
-            end
-            if swVars.opt.time
-                fprintf('%f sec\n', swVars.results{swVars_i}(swVars_k).time);
-            else
-                fprintf('done.\n');
-            end
+  clearvars mode
+  for swVars_i = 1:swVars.nCombinations
+    for swVars_k = 1:swVars.opt.nTrials
+      % set inputs for this parameter combination
+      fprintf('Combination %d of %d, trial %d of %d...', ...
+        swVars_i, numel(swVars.combinations), ...
+        swVars_k, swVars.opt.nTrials);
+      for swVars_m = 1:swVars.nParams
+        eval(sprintf('%s = swVars.combinations{%d}{%d};', ...
+          swVars.paramNames{swVars_m}, swVars_i, swVars_m));
+      end
+      % execute
+      if swVars.opt.time, tic; end
+      swVars.call();
+      swVars.results{swVars_i}(swVars_k).inputs = ...
+        swVars.combinations{swVars_i};
+      if swVars.opt.time
+        swVars.results{swVars_i}(swVars_k).time = toc;
+      end
+      % store results
+      swVars.vars = whos;
+      swVars.vars = {swVars.vars.name};
+      for swVars_m = 1:length(swVars.vars)
+        swVars.varName = swVars.vars{swVars_m};
+        swVars.store = (isempty(swVars.opt.varsToStore) || ...
+          any(strcmp(swVars.varName, swVars.opt.varsToStore))) && ...
+          ~any(strcmp(swVars.varName, swVars.excludedVars));
+        if swVars.store
+          eval(sprintf('swVars.results{%d}(%d).%s = %s;', ...
+            swVars_i, swVars_k, ...
+            swVars.varName, swVars.varName));
         end
+      end
+      if swVars.opt.time
+        fprintf('%f sec\n', swVars.results{swVars_i}(swVars_k).time);
+      else
+        fprintf('done.\n');
+      end
     end
-    results = swVars.results;
+  end
+  results = swVars.results;
 end
 
 end
