@@ -62,7 +62,7 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.6 - 14 Feb 2017
+%   Matt O'Shaughnessy, v0.7 - 21 Feb 2017
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
@@ -81,6 +81,7 @@ p.addParameter('nOutputs', [], valFuncs.posInt);
 p.addParameter('time', true, valFuncs.time);
 p.addParameter('jobNum', [], valFuncs.posInt);
 p.addParameter('totalJobs', [], valFuncs.posInt);
+p.addParameter('waitbar', false, valFuncs.time);
 p.parse(call,params,varargin{:});
 opt = p.Results;
 
@@ -138,7 +139,8 @@ for i = 1:nParams
   str = [str num2str(nValues)];
   str = [str ','];
 end
-str = [str(1:end-1) ');'];
+if nParams == 1, str = [str(1:end-1) ',1,']; end
+str = [str(1:end-1) '); '];
 % nested for loop - one level per parameter to sweep
 for i = 1:nParams
   str = [str sprintf('for p%d = 1:%d, ', ...
@@ -226,6 +228,9 @@ else
   clearvars -except swVars mode
 end
 fprintf(' - Executing in %s mode.\n',mode);
+if swVars.opt.waitbar
+  swVars.hwaitbar = waitbar(0);
+end
 
 % --- function handle mode ---
 if strcmp(mode,'function_handle')
@@ -235,6 +240,10 @@ if strcmp(mode,'function_handle')
     for k = 1:opt.nTrials
       fprintf('Combination %d of %d, trial %d of %d...', ...
         i, nCombinations, k, opt.nTrials);
+      if swVars.opt.waitbar
+        waitbar(((i-1)*opt.nTrials+k) / ...
+          (numel(combinations)*opt.nTrials));
+      end
       if opt.time, tic; end
       [out{:}] = func(combinations{i}{:});
       results{i}(k).time = toc;
@@ -273,6 +282,10 @@ if strcmp(mode,'function')
     for k = 1:opt.nTrials
       fprintf('Combination %d of %d, trial %d of %d...', ...
         i, nCombinations, k, opt.nTrials);
+      if swVars.opt.waitbar
+        waitbar(((i-1)*opt.nTrials+k) / ...
+          (numel(combinations)*opt.nTrials));
+      end
       if opt.time, tic; end
       [out{:}] = func(combinations{i}{:});
       results{i}(k).allOutputs = out;
@@ -298,6 +311,10 @@ if strcmp(mode,'script')
       fprintf('Combination %d of %d, trial %d of %d...', ...
         swVars_i, numel(swVars.combinations), ...
         swVars_k, swVars.opt.nTrials);
+      if swVars.opt.waitbar
+        waitbar(((swVars_i-1)*swVars.opt.nTrials+swVars_k) / ...
+          (numel(swVars.combinations)*swVars.opt.nTrials));
+      end
       for swVars_m = 1:swVars.nParams
         eval(sprintf('%s = swVars.combinations{%d}{%d};', ...
           swVars.paramNames{swVars_m}, swVars_i, swVars_m));
@@ -333,5 +350,7 @@ if strcmp(mode,'script')
   end
   results = swVars.results;
 end
+
+if swVars.opt.waitbar, close(swVars.hwaitbar); end
 
 end
