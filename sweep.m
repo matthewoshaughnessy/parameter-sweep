@@ -1,3 +1,5 @@
+% TODO - warn if requested variable does not exist (or set to [])
+% TODO - suggest double curly brackets if params struct isn't scalar
 function results = sweep(call, params, varargin)
 % SWEEP  Run function or script, sweeping over multiple variables.
 %   results = SWEEP(call,params) executes CALL, sweeping over every
@@ -346,6 +348,8 @@ if strcmp(mode,'script')
       else
         fprintf('done.\n');
       end
+      % clear variables from workspace
+      clearvars -except swVars*
     end
   end
   results = swVars.results;
