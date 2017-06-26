@@ -227,12 +227,12 @@ else
   swVars.nParams = nParams;
   swVars.results = results;
   swVars.nCombinations = nCombinations;
+  swVars.opt = opt;
   swVars.excludedVars = {'swVars_i','swVars_k','swVars_m'};
   clearvars -except swVars mode
 end
 fprintf(' - Executing in %s mode.\n',mode);
-swVars.opt = opt;
-if swVars.opt.waitbar
+if (strcmp(mode,'script') && swVars.opt.waitbar) || opt.waitbar
   swVars.hwaitbar = waitbar(0);
 end
 
