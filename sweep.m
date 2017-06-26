@@ -64,7 +64,7 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.7 - 21 Feb 2017
+%   Matt O'Shaughnessy, v0.8 - 26 Jun 2017
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
@@ -220,7 +220,6 @@ else
   mode = 'script';
   swVars.call = str2func(call);
   swVars.combinations = combinations;
-  swVars.opt = opt;
   swVars.params = params;
   swVars.paramNames = paramNames;
   swVars.nParams = nParams;
@@ -230,6 +229,7 @@ else
   clearvars -except swVars mode
 end
 fprintf(' - Executing in %s mode.\n',mode);
+swVars.opt = opt;
 if swVars.opt.waitbar
   swVars.hwaitbar = waitbar(0);
 end
