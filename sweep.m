@@ -1,5 +1,7 @@
 % TODO - warn if requested variable does not exist (or set to [])
 % TODO - suggest double curly brackets if params struct isn't scalar
+% TODO - verify spaces around '=' in function mode work correctly
+% TODO - allow parentheses in string function input
 function results = sweep(call, params, varargin)
 % SWEEP  Run function or script, sweeping over multiple variables.
 %   results = SWEEP(call,params) executes CALL, sweeping over every
@@ -249,7 +251,7 @@ if strcmp(mode,'function_handle')
       if opt.time, tic; end
       [out{:}] = func(combinations{i}{:});
       results{i}(k).time = toc;
-      results{i}(k) = out;
+      results{i}(k).allOutputs = out;
       results{i}(k).inputs = combinations{i};
       if opt.time, fprintf('%f sec\n', results{i}(k).time),
       else fprintf('done.\n'); end
