@@ -66,7 +66,7 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.8 - 26 Jun 2017
+%   Matt O'Shaughnessy, v0.9 - 17 August 2017
 %   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
 %
 
@@ -118,9 +118,9 @@ end
 % string (not string in cell) included in params
 if any(structfun(@(x) ischar(x) && ~isscalar(x), params))
   error(['String included in params struct. All strings must be in cell'...
-    ' arrays.\nNote: if constructing params struct using the struct '...
-    'function, use double curly braces for a single input string\n'...
-    '(e.g., struct(''stringField'',{{''stringValue''}}))']);
+    ' arrays. (NOTE: if constructing params struct using the struct '...
+    'function, use double curly braces for a single input string, '...
+    'e.g., struct(''stringField'',{{''stringValue''}})).)']);
 end
 % warn user if varsToStore not specified
 if isempty(opt.varsToStore)
@@ -199,6 +199,7 @@ if isa(call,'function_handle')
   % function handle mode
   mode = 'function_handle';
   func = call;
+  swVars.opt = opt;
 elseif ~isempty(strfind(call,'('))
   % function mode - need to parse inputs and outputs
   mode = 'function';
@@ -218,6 +219,7 @@ elseif ~isempty(strfind(call,'('))
       inputNames{i}==','|inputNames{i}=='('|inputNames{i}==')') = [];
   end
   inputNames(cellfun(@isempty,inputNames)) = [];
+  swVars.opt = opt;
 else
   mode = 'script';
   swVars.call = str2func(call);
@@ -232,7 +234,7 @@ else
   clearvars -except swVars mode
 end
 fprintf(' - Executing in %s mode.\n',mode);
-if (strcmp(mode,'script') && swVars.opt.waitbar) || opt.waitbar
+if swVars.opt.waitbar
   swVars.hwaitbar = waitbar(0);
 end
 
@@ -309,7 +311,7 @@ end
 % --- script mode ---
 if strcmp(mode,'script')
   clearvars mode
-  for swVars_i = 1:swVars.nCombinations
+  for swVars_i = combinationIndsThisNode
     for swVars_k = 1:swVars.opt.nTrials
       % set inputs for this parameter combination
       fprintf('Combination %d of %d, trial %d of %d...', ...
