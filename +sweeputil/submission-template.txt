@@ -1,0 +1,53 @@
+#!/bin/bash
+#PBS -N TEMPLATE_JOBNAME
+#PBS -q TEMPLATE_QUEUENAME
+#PBS -l walltime=TEMPLATE_WALLTIME
+#PBS -l nodes=TEMPLATE_NODES:ppn=TEMPLATE_PPN
+#PBS -j oe
+#PBS -o $PBS_O_WORKDIR/out.TEMPLATE_JOBNAME.$PBS_JOBID
+#PBS -k oe
+#PBS -m abe
+#PBS -M TEMPLATE_EMAIL
+
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+cd $PBS_O_WORKDIR
+NP=$(wc -l < $PBS_NODEFILE)
+module load gnuparallel/20150422
+module load matlab/TEMPLATE_MATLABVERSION
+module list
+
+#JOBFILE, BATCHSIZE, and BATCHNUM should be set in the environment
+#If they are not, use some defaults.
+# By setting BATCHSIZE to a default of the length of the jobfile we only require one of these jobs.
+# The user can submit multiple jobs and split up the batchcount to work on multiple nodes.
+JOBFILE=${JOBFILE:-~/data/TEMPLATE_JOBNAME/jobs.txt}
+
+if [ ! -f $JOBFILE ]; then echo "File $JOBFILE does not exist. Exiting"; exit 0; fi
+
+BATCHSIZE=${BATCHSIZE:-$(wc -l < $JOBFILE)}
+BATCHNUM=${BATCHNUM:-0}
+
+JOBCOUNT=$(wc -l < $JOBFILE)
+
+ENDLINE=$(($BATCHSIZE*$BATCHNUM + $BATCHSIZE))
+
+if [ $ENDLINE -gt $JOBCOUNT ]
+then
+
+  if [ $(($ENDLINE-$BATCHSIZE)) -gt $JOBCOUNT ]
+  then
+    echo "Given \"BATCHNUM\" is greater than the number of possible batches. Exiting..."
+    exit 0
+  fi
+
+  DIFFERENCE=$(($ENDLINE-$JOBCOUNT))
+  REMAININGJOBCOUNT=$(($BATCHSIZE-$DIFFERENCE))
+
+fi
+
+BATCHSIZE=${REMAININGJOBCOUNT:-$BATCHSIZE}
+
+head -n $ENDLINE $JOBFILE | tail -n $BATCHSIZE | parallel -j $NP -k 

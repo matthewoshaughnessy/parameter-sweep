@@ -2,6 +2,7 @@
 % TODO - suggest double curly brackets if params struct isn't scalar
 % TODO - verify spaces around '=' in function mode work correctly
 % TODO - allow parentheses in string function input
+% TODO - implement nWorkers option
 function results = sweep(call, params, varargin)
 % SWEEP  Run function or script, sweeping over multiple variables.
 %   results = SWEEP(call,params) executes CALL, sweeping over every
@@ -43,6 +44,7 @@ function results = sweep(call, params, varargin)
 %    - nOutputs    : number of outputs to request (in function handle mode)
 %    - time        : adds a 'time' field to the results field indicating
 %                    the execution time (sec) of each trial (default: true)
+%    - nWorkers    : specify the number of workers to use with parfor. TODO
 %    - jobNum      : for running large jobs on a cluster, specifies the
 %                    index of this job.  See 'cluster mode', below
 %    - totalJobs   : for running large jobs on a cluster, specifies the
@@ -227,8 +229,8 @@ else
   swVars.params = params;
   swVars.paramNames = paramNames;
   swVars.nParams = nParams;
-  swVars.results = results;
   swVars.nCombinations = nCombinations;
+  swVars.combinationIndsThisNode = combinationIndsThisNode;
   swVars.opt = opt;
   swVars.excludedVars = {'swVars_i','swVars_k','swVars_m'};
   clearvars -except swVars mode
@@ -311,7 +313,8 @@ end
 % --- script mode ---
 if strcmp(mode,'script')
   clearvars mode
-  for swVars_i = combinationIndsThisNode
+  swVars_results = cell(size(swVars.combinations));
+  for swVars_i = swVars.combinationIndsThisNode
     for swVars_k = 1:swVars.opt.nTrials
       % set inputs for this parameter combination
       fprintf('Combination %d of %d, trial %d of %d...', ...
@@ -328,10 +331,10 @@ if strcmp(mode,'script')
       % execute
       if swVars.opt.time, tic; end
       swVars.call();
-      swVars.results{swVars_i}(swVars_k).inputs = ...
+      swVars_results{swVars_i}(swVars_k).inputs = ...
         swVars.combinations{swVars_i};
       if swVars.opt.time
-        swVars.results{swVars_i}(swVars_k).time = toc;
+        swVars_results{swVars_i}(swVars_k).time = toc;
       end
       % store results
       swVars.vars = whos;
@@ -342,13 +345,16 @@ if strcmp(mode,'script')
           any(strcmp(swVars.varName, swVars.opt.varsToStore))) && ...
           ~any(strcmp(swVars.varName, swVars.excludedVars));
         if swVars.store
-          eval(sprintf('swVars.results{%d}(%d).%s = %s;', ...
-            swVars_i, swVars_k, ...
-            swVars.varName, swVars.varName));
+          %eval(sprintf('swVars.results{%d}(%d).%s = %s;', ...
+          %  swVars_i, swVars_k, ...
+          %  swVars.varName, swVars.varName));
+          swVars_results_thisIter = eval(swVars.varName);
+          swVars_results{swVars_i}(swVars_k).(swVars.varName) = ...
+            swVars_results_thisIter;
         end
       end
       if swVars.opt.time
-        fprintf('%f sec\n', swVars.results{swVars_i}(swVars_k).time);
+        fprintf('%f sec\n', swVars_results{swVars_i}(swVars_k).time);
       else
         fprintf('done.\n');
       end
@@ -356,7 +362,7 @@ if strcmp(mode,'script')
       clearvars -except swVars*
     end
   end
-  results = swVars.results;
+  results = swVars_results;
 end
 
 if swVars.opt.waitbar, close(swVars.hwaitbar); end
