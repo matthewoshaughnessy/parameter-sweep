@@ -8,4 +8,4 @@ See documentation in `sweep.m`
 
 An extension of the sweep utility to easily perform parallel parameter sweeps on the [Georgia Tech PACE cluster](pace.gatech.edu).
 
-See documentation in `sweeputil.pacesweep.m`
+See documentation in `+sweeputil/pacesweep.m`

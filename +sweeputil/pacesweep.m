@@ -15,7 +15,9 @@ function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
 %      - submit the job on pace
 %      - generate a matlab file in <dirname> to retrieve and concatenate
 %        when the job has completed
-%  4. When the job is completed (per email notification), run the 
+%  4. When the job is completed (per email notification), run the
+%     retrieve_<jobname>.m script. When completed, the results will be
+%     placed in <dirname>/results.mat.
 
 
 % --- internal parameters ---
