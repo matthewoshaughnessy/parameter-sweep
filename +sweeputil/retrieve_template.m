@@ -1,6 +1,6 @@
 % --- retrieve files ---
 mkdir(fullfile('TEMPLATE_DIRNAME','results'));
-system(['scp -r TEMPLATE_USERNAME@ece.pace.gatech.edu:~/data/' ...
+system(['scp -r TEMPLATE_USERNAME@TEMPLATE_HEADNODE.pace.gatech.edu:~/data/' ...
   'TEMPLATE_JOBNAME/results* TEMPLATE_DIRNAME/results/'], '-echo');
 
 
@@ -27,3 +27,4 @@ fprintf('Done!\n\n');
 
 % --- clean up ---
 system(sprintf('rm -r %s', fullfile('TEMPLATE_DIRNAME','results')));
+clear;

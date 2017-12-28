@@ -1,4 +1,5 @@
-% TODO - sed multiple on same line
+% TODO - bug in cluster mode if more procs than tasks?
+% TODO - bug when trying to update code already on pace in ~/data/dirname/?
 function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
 % INSTRUCTIONS:
 %  1. Create the file <jobname>.m that contains the sweep command to run.
@@ -21,10 +22,11 @@ function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
 
 
 % --- internal parameters ---
-defaultqueue = 'eceforce-6';
-defaultwalltime = '2:00:00';
+defaultqueue = 'davenporter';
+defaultwalltime = '8:00:00';
 matlabversion = 'r2016b';
 username = 'moshaughnessy6';
+headnode = 'davenporter';
 email = 'moshaughnessy6@gatech.edu';
 
 
@@ -55,7 +57,7 @@ templatefile = fullfile(dirname,[jobname '.m']);
 fh = fopen(fullfile(dirname,'tocopy','jobs.txt'),'w');
 for i = 1:njobs
   destfile = fullfile(dirname,'tocopy',sprintf('%s_%d.m',jobname,i));
-  system(sprintf('sed -e s/JOBNUM/%d/ -e s/TOTALJOBS/%d/ <%s>%s', ...
+  system(sprintf('sed -e s/JOBNUM/%d/g -e s/TOTALJOBS/%d/g <%s>%s', ...
     i, njobs, templatefile, destfile));
   fprintf(fh, 'matlab -nodisplay -singleCompThread -r "%s_%d()"\n', ...
     jobname, i);
@@ -85,9 +87,15 @@ system(sprintf('scp -r %s moshaughnessy6@iw-dm-4.pace.gatech.edu:~/data/%s', ...
 
 % --- submit jobs to pace ---
 [~,out] = system([sprintf(...
-  'ssh %s@ece.pace.gatech.edu bash -c "''cd ~/data/%s/; qsub submit-%s.txt''"', ...
-  username, pacedirname, jobname) ''],'-echo');
+  'ssh %s@%s.pace.gatech.edu bash -c "''cd ~/data/%s/; qsub submit-%s.txt''"', ...
+  username, headnode, pacedirname, jobname) ''],'-echo');
 %jobid = strtok(out,'.');
+
+
+% --- write record file ---
+fh = fopen(fullfile(dirname,'submission-record.txt'),'w');
+fprintf(fh, 'Submitted %s -- %s', datestr(now), out);
+fclose(fh);
 
 
 % --- remove temporary files ---
@@ -99,8 +107,9 @@ system(sprintf(['sed ' ...
   '-e s/TEMPLATE_DIRNAME/%s/ ' ...
   '-e s/TEMPLATE_USERNAME/%s/ ' ...
   '-e s/TEMPLATE_JOBNAME/%s/ ' ...
+  '-e s/TEMPLATE_HEADNODE/%s/ ' ...
   '< %s > %s'], ...
-  dirname, username, jobname, ...
+  dirname, username, jobname, headnode, ...
   fullfile(fileparts(which('sweeputil.pacesweep')),'retrieve_template.m'), ...
   fullfile(dirname,['retrieve_' jobname '.m'])));
 

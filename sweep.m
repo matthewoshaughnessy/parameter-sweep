@@ -34,6 +34,8 @@ function results = sweep(call, params, varargin)
 %    example: params.val1 = {1, 2, 3} will sweep three values
 %             params.val1 = [1, 2, 3] will sweep three values
 %             params.val1 = {[1 2], [3 4], [5 6]} will sweep three values
+%    Warning: if constructing the params structure with struct, remember to
+%             use {{ * }} to avoid creating a structure array
 %
 %   ADDITIONAL PARAMETERS - optional name/value pairs:
 %    - nTrials     : number of trials to perform for each parameter
@@ -46,9 +48,9 @@ function results = sweep(call, params, varargin)
 %                    the execution time (sec) of each trial (default: true)
 %    - nWorkers    : specify the number of workers to use with parfor. TODO
 %    - jobNum      : for running large jobs on a cluster, specifies the
-%                    index of this job.  See 'cluster mode', below
+%                    index of this job.  See 'cluster mode' below
 %    - totalJobs   : for running large jobs on a cluster, specifies the
-%                    total number of jobs.  See 'cluster mode', below
+%                    total number of jobs.  See 'cluster mode' below
 %
 %   OUTPUT:
 %    The output of SWEEP is a cell array containing one cell per
@@ -68,8 +70,8 @@ function results = sweep(call, params, varargin)
 %      node2>> results2 = sweep(..., 'jobNum', 2, 'totalJobs', 3)
 %      node3>> results3 = sweep(..., 'jobNum', 3, 'totalJobs', 3)
 %
-%   Matt O'Shaughnessy, v0.9 - 17 August 2017
-%   Please send suggestions and bugs to matthewoshaughnessy@gatech.edu
+%   Matt O'Shaughnessy, v9 - 17 August 2017
+%   Please send bugs or comments to moshaughnessy6@gatech.edu
 %
 
 % --- parse input ---
