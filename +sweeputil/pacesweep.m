@@ -1,4 +1,3 @@
-% TODO - run startup.m at beginning of each job
 % TODO - empty results if not divisible by number of cores?
 % TODO - concatenating large results structures is very slow
 % TODO - verify walltime is a string (time w/out quotes becomes [])
