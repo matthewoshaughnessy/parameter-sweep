@@ -4,7 +4,7 @@ Writing code to perform a parameter sweep is time consuming, tedious, and clutte
 
 See documentation in `sweep.m`
 
-## Parameter sweeps using the PACE cluster
+### Parameter sweeps using the PACE cluster
 
 An extension of the sweep utility to easily perform parallel parameter sweeps on the [Georgia Tech PACE cluster](http://www.pace.gatech.edu).
 

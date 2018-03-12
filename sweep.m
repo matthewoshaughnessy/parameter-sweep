@@ -254,9 +254,9 @@ if strcmp(mode,'function_handle')
         waitbar(((i-1)*opt.nTrials+k) / ...
           (numel(combinations)*opt.nTrials));
       end
-      if opt.time, tic; end
+      if opt.time, t1 = tic; end
       [out{:}] = func(combinations{i}{:});
-      results{i}(k).time = toc;
+      results{i}(k).time = toc(t1);
       results{i}(k).allOutputs = out;
       results{i}(k).inputs = combinations{i};
       if opt.time, fprintf('%f sec\n', results{i}(k).time),
@@ -296,10 +296,10 @@ if strcmp(mode,'function')
         waitbar(((i-1)*opt.nTrials+k) / ...
           (numel(combinations)*opt.nTrials));
       end
-      if opt.time, tic; end
+      if opt.time, t1 = tic; end
       [out{:}] = func(combinations{i}{:});
       results{i}(k).allOutputs = out;
-      results{i}(k).time = toc;
+      results{i}(k).time = toc(t1);
       results{i}(k).inputs = combinations{i};
       if opt.time && opt.nTrials==1
         fprintf('%f sec\n', results{i}.time),
@@ -331,12 +331,12 @@ if strcmp(mode,'script')
           swVars.paramNames{swVars_m}, swVars_i, swVars_m));
       end
       % execute
-      if swVars.opt.time, tic; end
+      if swVars.opt.time, swVars.opt.t1 = tic; end
       swVars.call();
       swVars_results{swVars_i}(swVars_k).inputs = ...
         swVars.combinations{swVars_i};
       if swVars.opt.time
-        swVars_results{swVars_i}(swVars_k).time = toc;
+        swVars_results{swVars_i}(swVars_k).time = toc(swVars.opt.t1);
       end
       % store results
       swVars.vars = whos;

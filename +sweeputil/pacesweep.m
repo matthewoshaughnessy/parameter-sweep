@@ -1,3 +1,8 @@
+% TODO - run startup.m at beginning of each job
+% TODO - empty results if not divisible by number of cores?
+% TODO - concatenating large results structures is very slow
+% TODO - verify walltime is a string (time w/out quotes becomes [])
+% TODO - only works (see retrieve script) when submitting with dirname '.'?
 % TODO - bug in cluster mode if more procs than tasks?
 % TODO - bug when trying to update code already on pace in ~/data/dirname/?
 function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
@@ -39,10 +44,11 @@ pacedirname = jobname;
 if exist('tocopy','dir'); error('tocopy directory already exists'); end
 mkdir(fullfile(dirname,'tocopy'));
 copyfile(which('sweep'),[fullfile(dirname,'tocopy',filesep),'sweep.m']);
-files = dir;  files = {files.name};  files(1:2) = []; % TODO
+files = dir(dirname);  files = {files.name};  files(1:2) = []; % TODO
 files(strcmp(files,'tocopy')) = [];
 for i = 1:length(files)
-  copyfile(files{i},[fullfile(pwd,'tocopy',filesep) files{i}]);
+  copyfile(fullfile(pwd,dirname,files{i}), ...
+    [fullfile(pwd,dirname,'tocopy',filesep) files{i}]);
 end
 if ~exist(fullfile(dirname,'tocopy',[jobname '.m']),'file')
   rmdir(fullfile(dirname,'tocopy'),'s');
@@ -57,10 +63,12 @@ templatefile = fullfile(dirname,[jobname '.m']);
 fh = fopen(fullfile(dirname,'tocopy','jobs.txt'),'w');
 for i = 1:njobs
   destfile = fullfile(dirname,'tocopy',sprintf('%s_%d.m',jobname,i));
+  matlabCommand = sprintf('run(''~/data/MATLAB/startup.m''); %s_%d();', ...
+    jobname, i);
   system(sprintf('sed -e s/JOBNUM/%d/g -e s/TOTALJOBS/%d/g <%s>%s', ...
     i, njobs, templatefile, destfile));
-  fprintf(fh, 'matlab -nodisplay -singleCompThread -r "%s_%d()"\n', ...
-    jobname, i);
+  fprintf(fh, 'matlab -nodisplay -singleCompThread -r "%s"\n', ...
+    matlabCommand);
 end
 fclose(fh);
 
