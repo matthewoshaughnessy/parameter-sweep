@@ -43,7 +43,9 @@ pacedirname = jobname;
 if exist('tocopy','dir'); error('tocopy directory already exists'); end
 mkdir(fullfile(dirname,'tocopy'));
 copyfile(which('sweep'),[fullfile(dirname,'tocopy',filesep),'sweep.m']);
-files = dir(dirname);  files = {files.name};  files(1:2) = []; % TODO
+files = dir(dirname);  files = {files.name};
+files(strcmp(files,'.')) = [];
+files(strcmp(files,'..')) = [];
 files(strcmp(files,'tocopy')) = [];
 for i = 1:length(files)
   copyfile(fullfile(pwd,dirname,files{i}), ...
