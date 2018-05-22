@@ -23,6 +23,8 @@ function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
 %  4. When the job is completed (per email notification), run the
 %     retrieve_<jobname>.m script. When completed, the results will be
 %     placed in <dirname>/results.mat.
+%
+% Updated 2018/05/22: overwrite files modified on server during transfer
 
 
 % --- internal parameters ---
@@ -53,7 +55,7 @@ for i = 1:length(files)
 end
 if ~exist(fullfile(dirname,'tocopy',[jobname '.m']),'file')
   rmdir(fullfile(dirname,'tocopy'),'s');
-  error('MATLAB function %s.m does not exist');
+  error('MATLAB function %s.m does not exist',jobname);
 end
 njobs = nodes*ppn;
 
@@ -90,8 +92,8 @@ system(sprintf(['sed ' ...
 
 
 % --- move files to pace ---
-system(sprintf('scp -r %s moshaughnessy6@iw-dm-4.pace.gatech.edu:~/data/%s', ...
-  fullfile(dirname,'tocopy'), pacedirname));
+system(sprintf('scp -pr ''%s'' ''moshaughnessy6@iw-dm-4.pace.gatech.edu:~/data/%s/''', ...
+  fullfile(dirname,'tocopy','.'), pacedirname));
 
 
 % --- submit jobs to pace ---
