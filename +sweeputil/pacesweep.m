@@ -47,8 +47,10 @@ if exist('tocopy','dir'); error('tocopy directory already exists'); end
 if exist(sprintf('retrieve_%s.m',jobname),'file') ...
     || exist('submission-record.txt','file') ...
     || exist('results.mat','file')
-  warning('Found files from previous PACE job! Continuing will overwrite...');
+  fprintf('Found files from previous PACE job!\n');
+  fprintf('Press return to overwrite, or CTRL-C to exit...');
   pause();
+  fprintf('\n');
   if exist(sprintf('retrieve_%s.m',jobname),'file')
     system(sprintf('rm retrieve_%s.m',jobname));
   end
