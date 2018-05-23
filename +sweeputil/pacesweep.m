@@ -3,7 +3,6 @@
 % TODO - verify walltime is a string (time w/out quotes becomes [])
 % TODO - only works (see retrieve script) when submitting with dirname '.'?
 % TODO - bug in cluster mode if more procs than tasks?
-% TODO - bug when trying to update code already on pace in ~/data/dirname/?
 function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
 % INSTRUCTIONS:
 %  1. Create the file <jobname>.m that contains the sweep command to run.
@@ -25,6 +24,8 @@ function out = pacesweep(dirname, jobname, queue, walltime, nodes, ppn)
 %     placed in <dirname>/results.mat.
 %
 % Updated 2018/05/22: overwrite files modified on server during transfer
+% Updated 2018/05/23: automatically remove old results, retrieval script, 
+%                     and submission record if resubmitting
 
 
 % --- internal parameters ---
@@ -43,6 +44,21 @@ if isempty(nodes), nodes = 1; end
 if isempty(ppn), ppn = 16; end
 pacedirname = jobname;
 if exist('tocopy','dir'); error('tocopy directory already exists'); end
+if exist(sprintf('retrieve_%s.m',jobname),'file') ...
+    || exist('submission-record.txt','file') ...
+    || exist('results.mat','file')
+  warning('Found files from previous PACE job! Continuing will overwrite...');
+  pause();
+  if exist(sprintf('retrieve_%s.m',jobname),'file')
+    system(sprintf('rm retrieve_%s.m',jobname));
+  end
+  if exist('submission-record.txt','file')
+    system('rm submission-record.txt');
+  end
+  if exist('results.mat','file')
+    system('rm results.mat');
+  end
+end
 mkdir(fullfile(dirname,'tocopy'));
 copyfile(which('sweep'),[fullfile(dirname,'tocopy',filesep),'sweep.m']);
 files = dir(dirname);  files = {files.name};
