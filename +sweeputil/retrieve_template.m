@@ -1,11 +1,11 @@
 % --- retrieve files ---
 mkdir(fullfile('TEMPLATE_DIRNAME','results'));
-system(['scp -r TEMPLATE_USERNAME@TEMPLATE_HEADNODE.pace.gatech.edu:~/data/' ...
-  'TEMPLATE_JOBNAME/results* TEMPLATE_DIRNAME/results/'], '-echo');
+system(['scp -r TEMPLATE_USERNAME@TEMPLATE_HEADNODE.pace.gatech.edu:' ...
+  '~/data/TEMPLATE_JOBNAME/results* TEMPLATE_DIRNAME/results/'], '-echo');
 
 
 % --- concatenate results ---
-resultfiles = dir('./results/results*.mat');
+resultfiles = dir('TEMPLATE_DIRNAME/results/results*.mat');
 if isempty(resultfiles), error('No results returned!'); end
 resultfiles = {resultfiles.name};
 [~, reindex] = sort(str2double(regexp(resultfiles,'\d+','match','once')));
